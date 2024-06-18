@@ -26,7 +26,7 @@ Visit http://192.168.1.1/reset to reset your password.
 Best Regards,  
 Security Team.  
 ```
-**Program output**:
+**Output**:
 ```
 Email might be dangerous due to the following reasons:
 
