@@ -1,5 +1,5 @@
-import sys
-from utils import calculate_edit_distance, get_url_votes
+import argparse
+from utils import calculate_edit_distance, get_malicious_votes_count
 from url_helper import is_url, check_if_contains_ip
 
 URGENT_WORDS = {"urgent", "immediately", "action",
@@ -20,7 +20,7 @@ def check_for_suspicious_links(mail_word_list: list[str]) -> list[str]:
     urls_in_mail = [word for word in mail_word_list if is_url(word)]
     suspicious_links = []
     for url in urls_in_mail:
-        malicious_votes = get_url_votes(url)
+        malicious_votes = get_malicious_votes_count(url)
         if malicious_votes > 0:
             suspicious_links.append(f"url = {url} got {malicious_votes} malicious votes")
         contains_ip = check_if_contains_ip(url)
@@ -49,28 +49,7 @@ def check_for_urgent_language(mail_word_list: list[str]) -> list[str]:
     return suspicious_words
 
 
-""" 
-Assuming the input file is of the form:
-    sender@domain
-    email body
-"""
-
-
-def main():
-    if len(sys.argv) < 2:
-        print("No filename specified")
-        exit(1)
-    filename = sys.argv[1]
-    try:
-        with open(filename, 'r') as f:
-            sender_address = f.readline().strip()
-            sender_domain = sender_address.split("@")[1].lower()
-            mail_content = f.read()
-            mail_word_list = mail_content.split()
-    except FileNotFoundError:
-        print("File not found")
-        exit(1)
-
+def analyze_email(mail_word_list: list[str], sender_domain: str) -> None:
     suspicious_links = check_for_suspicious_links(mail_word_list)
     suspicious_urgent_words = check_for_urgent_language(mail_word_list)
     is_spoofed_address, close_to_domain = check_for_spoofed_address(sender_domain)
@@ -99,6 +78,32 @@ def main():
             print("Notice some suspicious urgent words were found:")
             for suspicious_word in suspicious_urgent_words:
                 print(f"\t{suspicious_word}")
+
+
+""" 
+Assuming the input file is of the form:
+    sender@domain
+    email body
+"""
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Welcome to my phishing detector')
+    parser.add_argument("file", type=argparse.FileType('r'), help="The email file to analyze")
+    args = parser.parse_args()
+
+    sender_address = args.file.readline().strip()
+    if "@" not in sender_address:
+        print("Sender address does not contain @, recheck the input file format please")
+        args.file.close()
+        exit(1)
+
+    sender_domain = sender_address.split("@")[1].lower()
+    mail_content = args.file.read()
+    mail_word_list = mail_content.split()
+    args.file.close()
+
+    analyze_email(mail_word_list, sender_domain)
 
 
 if __name__ == '__main__':
